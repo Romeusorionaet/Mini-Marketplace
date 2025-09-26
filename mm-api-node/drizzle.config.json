@@ -1,0 +1,12 @@
+{
+  "out": "src/database/migrations",
+  "schema": "src/database/schemas/index.js",
+  "dialect": "postgresql",
+  "dbCredentials": {
+    "url": "postgres://postgres:postgres@db:5432/mini_marketplace"
+  },
+  "extensionsFilters": ["postgis"],
+  "introspect": {
+    "casing": "camel"
+  }
+}
