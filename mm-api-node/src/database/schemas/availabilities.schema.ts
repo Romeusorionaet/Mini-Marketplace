@@ -1,9 +1,12 @@
-import { integer, pgTable, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, timestamp, text } from "drizzle-orm/pg-core";
 import { providers } from "./providers.schema";
+import { createId } from "@paralleldrive/cuid2";
 
 export const availabilities = pgTable("availabilities", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  providerId: integer("provider_id")
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  providerId: text("provider_id")
     .references(() => providers.id, { onDelete: "cascade" })
     .notNull(),
   dayOfWeek: integer("day_of_week"),

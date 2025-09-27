@@ -14,11 +14,13 @@
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",
+    "@paralleldrive/cuid2": "^2.2.2",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "fastify": "^5.6.1",
     "pg": "^8.16.3",
+    "socket.io": "^4.8.1",
     "tsup": "^8.5.0",
     "zod": "^4.1.11"
   },

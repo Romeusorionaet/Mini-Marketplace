@@ -1,12 +1,15 @@
 import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { providers } from "./providers.schema";
+import { createId } from "@paralleldrive/cuid2";
 
 export const services = pgTable("services", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  providerId: integer("provider_id")
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  providerId: text("provider_id")
     .references(() => providers.id, { onDelete: "cascade" })
     .notNull(),
-  typeId: integer("type_id")
+  typeId: text("type_id")
     .references(() => serviceTypes.id, { onDelete: "cascade" })
     .notNull(),
   name: text("name"),
@@ -21,13 +24,17 @@ export const services = pgTable("services", {
 });
 
 export const serviceTypes = pgTable("service_types", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
   name: text("name"),
 });
 
 export const serviceVariations = pgTable("service_variations", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  serviceId: integer("service_id")
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  serviceId: text("service_id")
     .references(() => services.id, { onDelete: "cascade" })
     .notNull(),
   name: text("name"),

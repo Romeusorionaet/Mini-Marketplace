@@ -1,6 +1,6 @@
 {
-  "id": "c1ef2414-dfcd-4bbd-80c4-4e208bb5ba93",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "d1cca0da-8d12-4a97-b91e-5326eda97c57",
+  "prevId": "c1ef2414-dfcd-4bbd-80c4-4e208bb5ba93",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -444,6 +444,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'CLIENT'"
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

@@ -1,22 +1,27 @@
-import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users.schema";
 import { providers } from "./providers.schema";
 import { statusEnum } from "./enums.schema";
 import { serviceVariations } from "./services.schema";
+import { availabilities } from "./availabilities.schema";
+import { createId } from "@paralleldrive/cuid2";
 
 export const bookings = pgTable("bookings", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  clientId: integer("client_id")
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  clientId: text("client_id")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
-  providerId: integer("provider_id")
+  providerId: text("provider_id")
     .references(() => providers.id, { onDelete: "cascade" })
     .notNull(),
-  serviceVariationId: integer("service_variation_id")
+  serviceVariationId: text("service_variation_id")
     .references(() => serviceVariations.id, { onDelete: "cascade" })
     .notNull(),
-  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
-  endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+  availabilityId: text("availability_id")
+    .references(() => availabilities.id)
+    .notNull(),
   status: statusEnum(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
