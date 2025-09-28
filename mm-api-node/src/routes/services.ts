@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { FastifyInstance } from "fastify";
+import { CACHE_KEYS } from "src/constants/cache-keys";
 import { database } from "src/database/db";
 import {
   services,
@@ -7,6 +8,7 @@ import {
   serviceVariations,
 } from "src/database/schemas";
 import { esClient } from "src/services/elastic-search/es-client";
+import redis from "src/services/setup-cache/redis";
 
 export async function serviceRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateServiceBodyType }>(
@@ -75,6 +77,12 @@ export async function serviceRoutes(app: FastifyInstance) {
 
         await esClient.indices.refresh({ index: "services" });
 
+        await Promise.all([
+          redis.del(CACHE_KEYS.SERVICE_TYPES),
+          redis.del(CACHE_KEYS.BY_TYPE(service.typeId)),
+          redis.del(CACHE_KEYS.SERVICE(serviceCreated.id)),
+        ]);
+
         return reply
           .status(201)
           .send({ message: "Serviço registrado com sucesso" });
@@ -86,7 +94,13 @@ export async function serviceRoutes(app: FastifyInstance) {
 
   app.get("/list-types", async (request, reply) => {
     try {
+      const CACHE_KEY = CACHE_KEYS.SERVICE_TYPES;
+      const cached = await redis.get(CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+
       const services = await database.select().from(serviceTypes);
+
+      await redis.set(CACHE_KEY, JSON.stringify(services), "EX", 300);
 
       return reply.status(200).send({ services });
     } catch (err: any) {
@@ -94,10 +108,14 @@ export async function serviceRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get("/type-details", async (request, reply) => {
+  app.get("/by-type", async (request, reply) => {
     const { typeId } = request.query as { typeId: string };
 
     try {
+      const cacheKey = CACHE_KEYS.BY_TYPE(typeId);
+      const cached = await redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+
       const servicesSameType = await database
         .select()
         .from(services)
@@ -126,6 +144,13 @@ export async function serviceRoutes(app: FastifyInstance) {
           })),
       }));
 
+      await redis.set(
+        cacheKey,
+        JSON.stringify(servicesWithVariations),
+        "EX",
+        300
+      );
+
       return reply.status(200).send({ servicesWithVariations });
     } catch (err: any) {
       return reply.status(500).send({ message: "Erro interno do servidor" });
@@ -142,6 +167,12 @@ export async function serviceRoutes(app: FastifyInstance) {
     }
 
     try {
+      const cacheKey = `search:${query}`;
+      const cached = await redis.get(cacheKey);
+
+      if (cached)
+        return reply.status(200).send({ results: JSON.parse(cached) });
+
       const { hits } = await esClient.search({
         index: "services",
         query: {
@@ -159,7 +190,7 @@ export async function serviceRoutes(app: FastifyInstance) {
         },
       });
 
-      const results = hits.hits.map((hit: any) => ({
+      const services = hits.hits.map((hit: any) => ({
         id: hit._source.id,
         name: hit._source.name,
         description: hit._source.description,
@@ -169,7 +200,9 @@ export async function serviceRoutes(app: FastifyInstance) {
         score: hit._score,
       }));
 
-      return reply.status(200).send({ results });
+      await redis.set(cacheKey, JSON.stringify(services), "EX", 60);
+
+      return reply.status(200).send({ services });
     } catch (err: any) {
       if (err.meta?.body?.error?.type === "index_not_found_exception") {
         return reply.status(200).send({ results: [] });

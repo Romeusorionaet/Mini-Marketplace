@@ -11,6 +11,15 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: mini_marketplace_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
   api:
     build: ./mm-api-node
     container_name: mini_marketplace_api
@@ -18,22 +27,37 @@ services:
       - "3333:3333"
     depends_on:
       - db
+      - elasticsearch
+      - redis
     environment:
-      DATABASE_CLIENT: pg
-      DB_HOST: db
-      DB_PORT: 5432
-      DATABASE_URL: postgres://postgres:postgres@db:5432/mini_marketplace
+      - .env.production
 
   front:
     build:
       context: ./mm-front-svelte
       args:
-        VITE_API_URL: http://localhost:3333
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3333}
     container_name: mini_marketplace_front
     ports:
       - "3000:3000"
     depends_on:
       - api
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.2
+    container_name: mini_marketplace_es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - cluster.name=mini_marketplace_cluster
+      - node.name=es_node_1
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    restart: always
+
 volumes:
   db_data:
+  es_data:
+  redis_data:

@@ -20,13 +20,16 @@
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "fastify": "^5.6.1",
+    "ioredis": "^5.8.0",
     "pg": "^8.16.3",
+    "redis": "^5.8.2",
     "socket.io": "^4.8.1",
     "tsup": "^8.5.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/ioredis": "^5.0.0",
     "@types/node": "^24.5.2",
     "@types/pg": "^8.15.5",
     "drizzle-kit": "^0.31.4",

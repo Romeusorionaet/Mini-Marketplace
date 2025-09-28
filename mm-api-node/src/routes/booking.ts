@@ -1,8 +1,15 @@
 import { eq, and } from "drizzle-orm";
 import { FastifyInstance } from "fastify";
 import { io } from "src/app";
+import { CACHE_KEYS } from "src/constants/cache-keys";
 import { database } from "src/database/db";
-import { bookings, serviceVariations } from "src/database/schemas";
+import {
+  availabilities,
+  bookings,
+  serviceVariations,
+  users,
+} from "src/database/schemas";
+import redis from "src/services/setup-cache/redis";
 
 export async function bookingRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateBookingBodyType }>(
@@ -40,6 +47,10 @@ export async function bookingRoutes(app: FastifyInstance) {
           message: "Você recebeu uma nova contratação!",
         });
 
+        await redis.del(CACHE_KEYS.SCHEDULE_PROVIDER(booking.providerId));
+        await redis.del(CACHE_KEYS.HISTORY_PROVIDER(booking.providerId));
+        await redis.del(CACHE_KEYS.BOOKINGS_CLIENT(booking.clientId));
+
         return reply
           .status(201)
           .send({ message: "Serviço contratado com sucesso!" });
@@ -49,13 +60,22 @@ export async function bookingRoutes(app: FastifyInstance) {
     }
   );
 
-  app.get("/list", async (request, reply) => {
+  app.get("/list/provider", async (request, reply) => {
     const { providerId } = request.query as { providerId: string };
 
     try {
       const bookingsProvider = await database
         .select()
         .from(bookings)
+        .leftJoin(users, eq(users.id, bookings.clientId))
+        .leftJoin(
+          serviceVariations,
+          eq(serviceVariations.id, bookings.serviceVariationId)
+        )
+        .leftJoin(
+          availabilities,
+          eq(availabilities.id, bookings.availabilityId)
+        )
         .where(
           and(
             eq(bookings.providerId, providerId),
@@ -84,16 +104,61 @@ export async function bookingRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get("/history", async (request, reply) => {
+  app.get("/history/provider", async (request, reply) => {
     const { providerId } = request.query as { providerId: string };
 
     try {
-      const historyBookings = await database
+      const cacheKey = CACHE_KEYS.HISTORY_PROVIDER(providerId);
+      const cached = await redis.get(cacheKey);
+      if (cached) return reply.send({ historyBookings: JSON.parse(cached) });
+
+      const historyBookingsProvider = await database
         .select()
         .from(bookings)
+        .leftJoin(users, eq(users.id, bookings.clientId))
+        .leftJoin(
+          serviceVariations,
+          eq(serviceVariations.id, bookings.serviceVariationId)
+        )
+        .leftJoin(
+          availabilities,
+          eq(availabilities.id, bookings.availabilityId)
+        )
         .where(eq(bookings.providerId, providerId));
 
-      return reply.status(200).send({ historyBookings });
+      await redis.set(
+        cacheKey,
+        JSON.stringify(historyBookingsProvider),
+        "EX",
+        300
+      );
+
+      return reply.status(200).send({ historyBookingsProvider });
+    } catch (err: any) {
+      return reply.status(500).send({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/list/client", async (request, reply) => {
+    const { clientId } = request.query as { clientId: string };
+
+    try {
+      const cacheKey = CACHE_KEYS.BOOKINGS_CLIENT(clientId);
+      const cached = await redis.get(cacheKey);
+      if (cached) return reply.send({ historyBookings: JSON.parse(cached) });
+
+      const clientBookings = await database
+        .select()
+        .from(bookings)
+        .where(eq(bookings.clientId, clientId));
+
+      if (clientBookings.length === 0) {
+        return reply.status(200).send({ schedule: [] });
+      }
+
+      await redis.set(cacheKey, JSON.stringify(clientBookings), "EX", 300);
+
+      return reply.status(200).send({ clientBookings });
     } catch (err: any) {
       return reply.status(500).send({ message: "Erro interno do servidor" });
     }
