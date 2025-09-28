@@ -5,16 +5,18 @@ import { scheduleRoutes } from "./routes/schedule";
 import { registerRoutes } from "./routes/auth";
 import { bookingRoutes } from "./routes/booking";
 import { Server } from "socket.io";
+import { userRoutes } from "./routes/user";
+import { env } from "./env";
 
 export const app = fastify();
 
 const setupApp = async () => {
-  await app.register(fastifyCors, { origin: process.env.HOST_URL });
+  await app.register(fastifyCors, { origin: env.HOST_URL });
 };
 
 export const io = new Server(app.server, {
   cors: {
-    origin: process.env.HOST_URL,
+    origin: env.HOST_URL,
   },
 });
 
@@ -24,3 +26,4 @@ app.register(registerRoutes, { prefix: "auth" });
 app.register(serviceRoutes, { prefix: "service" });
 app.register(scheduleRoutes, { prefix: "schedule/availability" });
 app.register(bookingRoutes, { prefix: "booking" });
+app.register(userRoutes, { prefix: "user" });
