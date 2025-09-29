@@ -13,10 +13,30 @@ services:
     restart: always
 
   redis:
-    container_name: mini_marketplace_redis
+    container_name: mini_marketplace_redis_dev
     image: redis:7-alpine
     ports:
       - 6379:6379
     volumes:
       - ./data/redis:/data
     restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.2
+    container_name: mini_marketplace_es_dev
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - cluster.name=mini_marketplace_cluster
+      - node.name=es_node_1
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    restart: always
+
+volumes:
+  db_data:
+  redis_data:
+  es_data:

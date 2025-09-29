@@ -29,8 +29,8 @@ services:
       - db
       - elasticsearch
       - redis
-    environment:
-      - .env.production
+    env_file:
+      - ./mm-api-node/.env.production
 
   front:
     build:

@@ -9,7 +9,6 @@ export default defineConfig({
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  extensionsFilters: ["postgis"],
   introspect: {
     casing: "camel",
   },
