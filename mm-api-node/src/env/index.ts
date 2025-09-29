@@ -6,10 +6,11 @@ const envFile =
     ? ".env.production"
     : ".env.development";
 
+console.log("⚙️ Current Environment file:", envFile);
 config({ path: envFile });
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
+  NODE_ENV: z.enum(["development", "production"]).default("development"),
   DATABASE_CLIENT: z.enum(["pg"]),
   DATABASE_URL: z.string(),
   PORT: z.coerce.number().default(3333),

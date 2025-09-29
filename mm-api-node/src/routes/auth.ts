@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
-import { database } from "src/database/db";
-import { providers, users } from "src/database/schemas";
-import { hashPassword } from "src/utils/cryptography";
+import { database } from "../database/db";
+import { providers, users } from "../database/schemas";
+import { hashPassword } from "../utils/cryptography";
 
 export async function registerRoutes(app: FastifyInstance) {
   app.post<{ Body: RegisterAuthBodyType }>(

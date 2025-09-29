@@ -1,14 +1,10 @@
 import { eq, inArray } from "drizzle-orm";
 import { FastifyInstance } from "fastify";
-import { CACHE_KEYS } from "src/constants/cache-keys";
-import { database } from "src/database/db";
-import {
-  services,
-  serviceTypes,
-  serviceVariations,
-} from "src/database/schemas";
-import { esClient } from "src/services/elastic-search/es-client";
-import redis from "src/services/setup-cache/redis";
+import { CACHE_KEYS } from "../constants/cache-keys";
+import { database } from "../database/db";
+import { services, serviceTypes, serviceVariations } from "../database/schemas";
+import { esClient } from "../services/elastic-search/es-client";
+import redis from "../services/setup-cache/redis";
 
 export async function serviceRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateServiceBodyType }>(
@@ -176,16 +172,30 @@ export async function serviceRoutes(app: FastifyInstance) {
       const { hits } = await esClient.search({
         index: "services",
         query: {
-          multi_match: {
-            query,
-            fields: [
-              "name^2",
-              "description",
-              "variations.name",
-              "variation.priceCents",
-              "variation.durationMinutes",
+          bool: {
+            should: [
+              {
+                multi_match: {
+                  query,
+                  fields: ["name^2", "description", "variations.name"],
+                  fuzziness: "AUTO",
+                },
+              },
+              {
+                range: {
+                  "variations.priceCents": {
+                    lte: parseInt(query),
+                  },
+                },
+              },
+              {
+                range: {
+                  "variations.durationMinutes": {
+                    lte: parseInt(query),
+                  },
+                },
+              },
             ],
-            fuzziness: "AUTO",
           },
         },
       });
@@ -204,6 +214,7 @@ export async function serviceRoutes(app: FastifyInstance) {
 
       return reply.status(200).send({ services });
     } catch (err: any) {
+      console.log(err, "===");
       if (err.meta?.body?.error?.type === "index_not_found_exception") {
         return reply.status(200).send({ results: [] });
       }

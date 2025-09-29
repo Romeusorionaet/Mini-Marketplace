@@ -1,15 +1,15 @@
 import { eq, and } from "drizzle-orm";
 import { FastifyInstance } from "fastify";
-import { io } from "src/app";
-import { CACHE_KEYS } from "src/constants/cache-keys";
-import { database } from "src/database/db";
+import { io } from "../app";
+import { CACHE_KEYS } from "../constants/cache-keys";
+import { database } from "../database/db";
 import {
   availabilities,
   bookings,
   serviceVariations,
   users,
-} from "src/database/schemas";
-import redis from "src/services/setup-cache/redis";
+} from "../database/schemas";
+import redis from "../services/setup-cache/redis";
 
 export async function bookingRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateBookingBodyType }>(

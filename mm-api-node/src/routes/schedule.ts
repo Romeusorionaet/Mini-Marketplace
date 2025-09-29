@@ -1,9 +1,9 @@
 import { FastifyInstance } from "fastify";
-import { database } from "src/database/db";
+import { database } from "../database/db";
 import { eq, gt, lt, and, inArray } from "drizzle-orm";
-import { availabilities, bookings } from "src/database/schemas";
-import redis from "src/services/setup-cache/redis";
-import { CACHE_KEYS } from "src/constants/cache-keys";
+import { availabilities, bookings } from "../database/schemas";
+import redis from "../services/setup-cache/redis";
+import { CACHE_KEYS } from "../constants/cache-keys";
 
 export async function scheduleRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateScheduleAvailabilityBodyType }>(

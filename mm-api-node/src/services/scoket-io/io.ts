@@ -1,5 +1,5 @@
-import { io } from "src/app";
-import { env } from "src/env";
+import { io } from "../../app";
+import { env } from "../../env";
 
 io.on("connection", (socket) => {
   socket.on("registerUser", (userId) => {
