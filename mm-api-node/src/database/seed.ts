@@ -75,22 +75,33 @@ async function seed() {
     ],
   ];
 
+  const exists = await esClient.indices.exists({
+    index: "services",
+  });
+
+  if (exists) {
+    await esClient.indices.delete({ index: "services" });
+  }
+
   for (let i = 0; i < providersData.length; i++) {
     const provider = providersData[i];
     const type = serviceTypesData[i];
 
     const serviceId = createId();
-    await database.insert(services).values({
-      id: serviceId,
-      providerId: provider.id,
-      typeId: type.id,
-      name: serviceNames[i][0],
-      description: `Serviço de ${serviceNames[i][0]} do ${usersData[i].name}`,
-      photos: [
-        "https://d6xcmfyh68wv8.cloudfront.net/learn-content/uploads/2022/10/Blog-Image-3.png",
-        "https://fjwp.s3.amazonaws.com/blog/wp-content/uploads/2019/02/06165134/life-work-balance-2.png",
-      ],
-    });
+    const [serviceCreated] = await database
+      .insert(services)
+      .values({
+        id: serviceId,
+        providerId: provider.id,
+        typeId: type.id,
+        name: serviceNames[i][0],
+        description: `Serviço de ${serviceNames[i][0]} do ${usersData[i].name}`,
+        photos: [
+          "https://d6xcmfyh68wv8.cloudfront.net/learn-content/uploads/2022/10/Blog-Image-3.png",
+          "https://fjwp.s3.amazonaws.com/blog/wp-content/uploads/2019/02/06165134/life-work-balance-2.png",
+        ],
+      })
+      .returning();
 
     const variations = serviceNames[i].map((name, idx) => ({
       id: createId(),
@@ -102,37 +113,27 @@ async function seed() {
 
     await database.insert(serviceVariations).values(variations);
 
-    const exists = await esClient.indices.exists({
+    const variationsFlat = variations.flat();
+
+    await esClient.index({
       index: "services",
+      id: serviceCreated.id,
+      document: {
+        id: serviceCreated.id,
+        providerId: serviceCreated.providerId,
+        typeId: serviceCreated.typeId,
+        name: serviceCreated.name,
+        description: serviceCreated.description,
+        variations: variationsFlat.map((v) => ({
+          id: v.id,
+          name: v.name,
+          priceCents: v.priceCents,
+          durationMinutes: v.durationMinutes,
+        })),
+      },
     });
-    if (!exists) {
-      const variationsFlat = variations.map((v) => ({
-        id: v.id,
-        name: v.name,
-        priceCents: v.priceCents,
-        durationMinutes: v.durationMinutes,
-      }));
 
-      await esClient.index({
-        index: "services",
-        id: serviceId,
-        document: {
-          id: serviceId,
-          providerId: provider.id,
-          typeId: type.id,
-          name: serviceNames[i][0],
-          description: `Serviço de ${serviceNames[i][0]} do ${usersData[i].name}`,
-          variations: variationsFlat.map((v) => ({
-            id: v.id,
-            name: v.name,
-            priceCents: v.priceCents,
-            durationMinutes: v.durationMinutes,
-          })),
-        },
-      });
-
-      await esClient.indices.refresh({ index: "services" });
-    }
+    await esClient.indices.refresh({ index: "services" });
   }
 
   const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
