@@ -6,16 +6,23 @@ import { database } from "../database/db";
 import {
   availabilities,
   bookings,
+  providers,
   serviceVariations,
   users,
 } from "../database/schemas";
 import redis from "../services/setup-cache/redis";
+import { verifyJWTAccessToken } from "src/middlewares/verify-jwt-access-token";
 
 export async function bookingRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateBookingBodyType }>(
     "/create",
+    { onRequest: verifyJWTAccessToken("CLIENT") },
     async (request, reply) => {
       const booking = request.body;
+
+      const token = request.cookies["@marketplace"];
+      if (!token) return reply.status(401).send({ loggedIn: false });
+      const payload = request.server.jwt.verify<JwtPayloadType>(token);
 
       try {
         const [existingBooking] = await database
@@ -30,7 +37,7 @@ export async function bookingRoutes(app: FastifyInstance) {
         }
 
         await database.insert(bookings).values({
-          clientId: booking.clientId,
+          clientId: payload.sub,
           providerId: booking.providerId,
           serviceVariationId: booking.serviceVariationId,
           availabilityId: booking.availabilityId,
@@ -139,28 +146,48 @@ export async function bookingRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get("/list/client", async (request, reply) => {
-    const { clientId } = request.query as { clientId: string };
+  app.get(
+    "/list/client",
+    { onRequest: verifyJWTAccessToken("CLIENT") },
+    async (request, reply) => {
+      const token = request.cookies["@marketplace"];
+      if (!token) return reply.status(401).send({ loggedIn: false });
+      const payload = request.server.jwt.verify<JwtPayloadType>(token);
 
-    try {
-      const cacheKey = CACHE_KEYS.BOOKINGS_CLIENT(clientId);
-      const cached = await redis.get(cacheKey);
-      if (cached) return reply.send({ historyBookings: JSON.parse(cached) });
+      try {
+        const cacheKey = CACHE_KEYS.BOOKINGS_CLIENT(payload.sub);
+        const cached = await redis.get(cacheKey);
+        if (cached) return reply.send({ clientBookings: JSON.parse(cached) });
 
-      const clientBookings = await database
-        .select()
-        .from(bookings)
-        .where(eq(bookings.clientId, clientId));
+        const clientBookings = await database
+          .select({
+            id: bookings.id,
+            status: bookings.status,
+            createdAt: bookings.createdAt,
+            updatedAt: bookings.updatedAt,
+            providerEmail: users.email,
+            serviceVariation: serviceVariations,
+            availability: availabilities,
+          })
+          .from(bookings)
+          .leftJoin(providers, eq(providers.id, bookings.providerId))
+          .leftJoin(users, eq(users.id, providers.userId))
+          .leftJoin(
+            serviceVariations,
+            eq(serviceVariations.id, bookings.serviceVariationId)
+          )
+          .leftJoin(
+            availabilities,
+            eq(availabilities.id, bookings.availabilityId)
+          )
+          .where(eq(bookings.clientId, payload.sub));
 
-      if (clientBookings.length === 0) {
-        return reply.status(200).send({ schedule: [] });
+        await redis.set(cacheKey, JSON.stringify(clientBookings), "EX", 300);
+
+        return reply.status(200).send({ clientBookings });
+      } catch (err: any) {
+        return reply.status(500).send({ message: "Erro interno do servidor" });
       }
-
-      await redis.set(cacheKey, JSON.stringify(clientBookings), "EX", 300);
-
-      return reply.status(200).send({ clientBookings });
-    } catch (err: any) {
-      return reply.status(500).send({ message: "Erro interno do servidor" });
     }
-  });
+  );
 }
