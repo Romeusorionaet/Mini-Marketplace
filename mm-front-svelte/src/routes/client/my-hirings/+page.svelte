@@ -85,6 +85,7 @@
         <button
           class="p-2 rounded shadow hover:shadow-xl text-left bg-white cursor-pointer"
           class:bg-yellow-100={$highlightBookingId === b.id}
+          class:bg-red-400={b.status === "CANCELLED"}
           on:click={clearHighlight}
         >
           <p><strong>Prestador:</strong> {b.providerEmail}</p>
