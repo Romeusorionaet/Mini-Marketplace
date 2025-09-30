@@ -5,10 +5,12 @@ import { database } from "../database/db";
 import { services, serviceTypes, serviceVariations } from "../database/schemas";
 import { esClient } from "../services/elastic-search/es-client";
 import redis from "../services/setup-cache/redis";
+import { verifyJWTAccessToken } from "src/middlewares/verify-jwt-access-token";
 
 export async function serviceRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateServiceBodyType }>(
     "/create",
+    { onRequest: verifyJWTAccessToken("PROVIDER") },
     async (request, reply) => {
       const service = request.body;
 
@@ -92,13 +94,14 @@ export async function serviceRoutes(app: FastifyInstance) {
     try {
       const CACHE_KEY = CACHE_KEYS.SERVICE_TYPES;
       const cached = await redis.get(CACHE_KEY);
-      if (cached) return JSON.parse(cached);
+      if (cached)
+        return reply.status(200).send({ servicesType: JSON.parse(cached) });
 
-      const services = await database.select().from(serviceTypes);
+      const servicesType = await database.select().from(serviceTypes);
 
-      await redis.set(CACHE_KEY, JSON.stringify(services), "EX", 300);
+      await redis.set(CACHE_KEY, JSON.stringify(servicesType), "EX", 300);
 
-      return reply.status(200).send({ services });
+      return reply.status(200).send({ servicesType });
     } catch (err: any) {
       return reply.status(500).send({ message: "Erro interno do servidor" });
     }
@@ -110,7 +113,10 @@ export async function serviceRoutes(app: FastifyInstance) {
     try {
       const cacheKey = CACHE_KEYS.BY_TYPE(typeId);
       const cached = await redis.get(cacheKey);
-      if (cached) return JSON.parse(cached);
+      if (cached)
+        return reply
+          .status(200)
+          .send({ servicesVariation: JSON.parse(cached) });
 
       const servicesSameType = await database
         .select()
@@ -118,7 +124,7 @@ export async function serviceRoutes(app: FastifyInstance) {
         .where(eq(services.typeId, typeId));
 
       if (servicesSameType.length === 0) {
-        return reply.status(200).send([]);
+        return reply.status(200).send({ servicesVariation: [] });
       }
 
       const serviceIds = servicesSameType.map((s) => s.id);
@@ -128,26 +134,52 @@ export async function serviceRoutes(app: FastifyInstance) {
         .from(serviceVariations)
         .where(inArray(serviceVariations.serviceId, serviceIds));
 
-      const servicesWithVariations = servicesSameType.map((service) => ({
-        ...service,
-        variations: variations
-          .filter((v) => v.serviceId === service.id)
-          .map((v) => ({
-            id: v.id,
-            name: v.name,
-            priceCents: v.priceCents,
-            durationMinutes: v.durationMinutes,
-          })),
+      const servicesVariation = variations.map((v) => ({
+        id: v.id,
+        name: v.name,
+        priceCents: v.priceCents,
+        durationMinutes: v.durationMinutes,
+        serviceId: v.serviceId,
       }));
+
+      await redis.set(cacheKey, JSON.stringify(servicesVariation), "EX", 300);
+
+      return reply.status(200).send({ servicesVariation: servicesVariation });
+    } catch (err: any) {
+      return reply.status(500).send({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/details", async (request, reply) => {
+    const { serviceId } = request.query as { serviceId: string };
+
+    try {
+      const cacheKey = CACHE_KEYS.SERVICE_DETAILS(serviceId);
+      const cached = await redis.get(cacheKey);
+      if (cached) return reply.status(200).send(JSON.parse(cached));
+
+      const [service] = await database
+        .select()
+        .from(services)
+        .where(eq(services.id, serviceId));
+
+      if (!service) {
+        return reply.status(404).send({ message: "Serviço não encontrado" });
+      }
+
+      const variations = await database
+        .select()
+        .from(serviceVariations)
+        .where(eq(serviceVariations.serviceId, serviceId));
 
       await redis.set(
         cacheKey,
-        JSON.stringify(servicesWithVariations),
+        JSON.stringify({ service, variations }),
         "EX",
         300
       );
 
-      return reply.status(200).send({ servicesWithVariations });
+      return reply.status(200).send({ service, variations });
     } catch (err: any) {
       return reply.status(500).send({ message: "Erro interno do servidor" });
     }
@@ -167,7 +199,9 @@ export async function serviceRoutes(app: FastifyInstance) {
       const cached = await redis.get(cacheKey);
 
       if (cached)
-        return reply.status(200).send({ results: JSON.parse(cached) });
+        return reply
+          .status(200)
+          .send({ servicesVariation: JSON.parse(cached) });
 
       const { hits } = await esClient.search({
         index: "services",
@@ -184,37 +218,34 @@ export async function serviceRoutes(app: FastifyInstance) {
               {
                 range: {
                   "variations.priceCents": {
-                    lte: parseInt(query),
+                    lte: !isNaN(parseInt(query)) ? parseInt(query) : 0,
                   },
                 },
               },
               {
                 range: {
                   "variations.durationMinutes": {
-                    lte: parseInt(query),
+                    lte: !isNaN(parseInt(query)) ? parseInt(query) : 0,
                   },
                 },
               },
             ],
+            minimum_should_match: 1,
           },
         },
       });
 
-      const services = hits.hits.map((hit: any) => ({
-        id: hit._source.id,
-        name: hit._source.name,
-        description: hit._source.description,
-        providerId: hit._source.providerId,
-        typeId: hit._source.typeId,
-        variations: hit._source.variations,
-        score: hit._score,
-      }));
+      const servicesVariation = hits.hits.flatMap((hit: any) =>
+        hit._source.variations.map((v: any) => ({
+          ...v,
+          serviceId: hit._source.id,
+        }))
+      );
 
-      await redis.set(cacheKey, JSON.stringify(services), "EX", 60);
+      await redis.set(cacheKey, JSON.stringify(servicesVariation), "EX", 60);
 
-      return reply.status(200).send({ services });
+      return reply.status(200).send({ servicesVariation });
     } catch (err: any) {
-      console.log(err, "===");
       if (err.meta?.body?.error?.type === "index_not_found_exception") {
         return reply.status(200).send({ results: [] });
       }
