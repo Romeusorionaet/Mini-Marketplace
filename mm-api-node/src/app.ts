@@ -29,7 +29,14 @@ app.register(fastifyJwt, {
 export const io = new Server(app.server, {
   cors: {
     origin: env.HOST_URL,
+    credentials: true,
   },
+});
+
+io.on("connection", (socket) => {
+  socket.on("registerUser", (userId) => {
+    socket.join(userId);
+  });
 });
 
 setupApp();
