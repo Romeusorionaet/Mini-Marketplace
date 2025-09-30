@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-custom-1: oklch(0.984 0.019 200.873);
+  --color-custom-2: oklch(0.208 0.042 265.755);
+
+  --drop-shadow-h1: 0 20px 10px #fff;
+  --drop-shadow-p: 0 0px 10px #000;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-custom-1);
+    color: var(--color-custom-2);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    /* font-family: var(--font-rowdies); */
+    letter-spacing: 2px;
+    font-weight: 400;
+    font-size: 18px;
+  }
+}
