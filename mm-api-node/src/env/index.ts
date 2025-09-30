@@ -6,7 +6,6 @@ const envFile =
     ? ".env.production"
     : ".env.development";
 
-console.log("⚙️ Current Environment file:", envFile);
 config({ path: envFile });
 
 const envSchema = z.object({
@@ -20,6 +19,7 @@ const envSchema = z.object({
   REDIS_HOST: z.string(),
   REDIS_PORT: z.string(),
   HOST_URL: z.string(),
+  JWT_SECRET: z.string(),
 });
 
 const _env = envSchema.safeParse(process.env);
