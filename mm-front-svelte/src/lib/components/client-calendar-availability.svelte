@@ -153,7 +153,7 @@
               {formatTime(slot.startTime)} — {formatTime(slot.endTime)}
             </div>
             <button
-              class="bg-blue-600 text-white px-3 cursor-pointer py-1 rounded"
+              class={`px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white cursor-pointer`}
               on:click={() => onBook({ slot })}
             >
               Reservar
