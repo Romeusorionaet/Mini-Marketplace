@@ -1,5 +1,4 @@
 type CreateServiceBodyType = {
-  providerId: string;
   typeId: string;
   name: string;
   description: string;

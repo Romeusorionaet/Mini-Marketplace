@@ -3,6 +3,7 @@ type JwtPayloadType = {
   name: string;
   email: string;
   role: "PROVIDER" | "CLIENT";
+  providerId: string;
   permissions?: string;
   iat?: number;
   exp?: number;
