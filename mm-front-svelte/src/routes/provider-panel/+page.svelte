@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from "$lib/api";
+  import { formatDuration } from "$lib/utils/format-duration";
   import { uploadFiles } from "$lib/utils/upload-files";
   import type { ServiceType } from "../../@types/service.type";
 
@@ -9,6 +10,7 @@
     serviceTypes: { id: string; name: string }[];
   };
 
+  let services: ServiceType[] = [...data.services];
   let deletingId: string | null = null;
   let selectedTypeId: string = "";
   let name = "";
@@ -29,7 +31,7 @@
     deletingId = serviceId;
     try {
       await api.delete(`/service/delete?serviceId=${serviceId}`);
-      data.services = data.services.filter((s) => s.id !== serviceId);
+      services = services.filter((s) => s.id !== serviceId);
     } catch (err: any) {
       alert(err.message || "Erro ao excluir o serviço.");
     } finally {
@@ -42,9 +44,7 @@
       (v) => !v.name || v.priceCents <= 0 || v.durationMinutes <= 0
     );
 
-    if (hasEmpty) {
-      return;
-    }
+    if (hasEmpty) return;
 
     variations = [
       ...variations,
@@ -53,7 +53,16 @@
   }
 
   async function createService() {
-    if (!selectedTypeId || !name || !description || variations.length === 0) {
+    const validVariations = variations.filter(
+      (v) => v.name && v.priceCents > 0 && v.durationMinutes > 0
+    );
+
+    if (
+      !selectedTypeId ||
+      !name ||
+      !description ||
+      validVariations.length === 0
+    ) {
       createError =
         "Selecione o tipo, preencha todos os campos e adicione pelo menos uma variação.";
       return;
@@ -69,23 +78,23 @@
         typeId: selectedTypeId,
         name,
         description,
-        variations: variations.map((v) => ({
+        variations: validVariations.map((v) => ({
           name: v.name,
-          priceCents: v.priceCents,
+          priceCents: Math.round(v.priceCents * 100),
           durationMinutes: v.durationMinutes,
         })),
         photos: photosUrls,
       };
 
-      const res = await api.post("/service/create", payload);
-      data.services = [res.data, ...data.services];
+      await api.post("/service/create", payload);
 
       name = "";
       description = "";
       variations = [{ name: "", priceCents: 0, durationMinutes: 0 }];
       photos = [];
+      window.location.reload();
     } catch (err: any) {
-      createError = err.response?.data?.message || "Erro ao criar serviço.";
+      createError = "Erro ao criar serviço.";
     } finally {
       creating = false;
     }
@@ -93,9 +102,7 @@
 
   function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
-    if (input.files) {
-      photos = Array.from(input.files);
-    }
+    if (input.files) photos = Array.from(input.files);
   }
 </script>
 
@@ -103,7 +110,7 @@
   <main class="flex-1">
     <h1 class="text-2xl font-bold mb-6">Serviços</h1>
 
-    <div class="bg-white shadow rounded p-4 mb-6">
+    <section class="bg-white shadow rounded p-4 mb-6">
       <h2 class="text-lg font-semibold mb-4">Criar Serviço</h2>
 
       {#if createError}
@@ -139,8 +146,8 @@
 
         {#each variations as v, i}
           <div class="flex max-md:flex-col gap-1">
-            <label class="block text-sm text-gray-700"
-              >Nome da opção
+            <label class="block text-sm text-gray-700">
+              Nome da opção
               <input
                 type="text"
                 placeholder="Ex: Corte masculino, Corte feminino..."
@@ -150,8 +157,8 @@
             </label>
 
             <div class="flex flex-col justify-center gap-1 items-end">
-              <label class="block text-sm text-gray-700"
-                >Preço
+              <label class="block text-sm text-gray-700">
+                Preço
                 <input
                   type="number"
                   placeholder="Em centavos (ex: 5000 = R$ 50)"
@@ -160,8 +167,8 @@
                 />
               </label>
 
-              <label class="block text-sm text-gray-700"
-                >Duração
+              <label class="block text-sm text-gray-700">
+                Duração (minutos)
                 <input
                   type="number"
                   placeholder="Tempo em minutos (ex: 60)"
@@ -196,17 +203,18 @@
           {creating ? "Criando..." : "Criar Serviço"}
         </button>
       </div>
-    </div>
+    </section>
 
-    <div class="bg-white shadow rounded p-4">
+    <section class="bg-white shadow rounded p-4">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">Meus Serviços</h2>
-        <span>{data.services.length}</span>
+        <span>{services.length}</span>
+        <!-- aqui usamos services local -->
       </div>
 
       {#if data.errorMessage}
         <p class="text-red-500">{data.errorMessage}</p>
-      {:else if data.services.length === 0}
+      {:else if services.length === 0}
         <p class="text-gray-600">Nenhum serviço cadastrado.</p>
       {:else}
         <div class="overflow-x-auto">
@@ -219,7 +227,8 @@
               </tr>
             </thead>
             <tbody>
-              {#each data.services as s}
+              {#each services as s}
+                <!-- aqui usamos services local -->
                 <tr
                   class="xl:table-row grid grid-cols-1 border-b p-2 md:p-0 md:border-0"
                 >
@@ -249,8 +258,9 @@
                       {#each s.variations as v}
                         <li class="flex justify-between items-center">
                           <span
-                            >{v.name} — R$ {(v.priceCents || 0) / 100} ({v.durationMinutes}
-                            min)</span
+                            >{v.name} — R$ {(v.priceCents / 100).toFixed(2)} | {formatDuration(
+                              v.durationMinutes
+                            )}</span
                           >
                         </li>
                       {/each}
@@ -262,6 +272,6 @@
           </table>
         </div>
       {/if}
-    </div>
+    </section>
   </main>
 </div>
