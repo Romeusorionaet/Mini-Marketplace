@@ -66,10 +66,24 @@ export async function registerRoutes(app: FastifyInstance) {
         return reply.status(401).send({ message: "Email ou senha incorretos" });
       }
 
+      let providerId: string | null = null;
+
+      if (user.role === "PROVIDER") {
+        const [provider] = await database
+          .select()
+          .from(providers)
+          .where(eq(providers.userId, user.id));
+
+        if (provider) {
+          providerId = provider.id;
+        }
+      }
+
       const token = app.jwt.sign({
         sub: user.id,
         email: user.email,
         role: user.role,
+        providerId,
       });
 
       reply
@@ -97,8 +111,10 @@ export async function registerRoutes(app: FastifyInstance) {
 
       return reply.send({
         loggedIn: true,
+        sub: payload.sub,
         email: payload.email,
         role: payload.role,
+        providerId: payload.providerId,
       });
     } catch (err) {
       return reply.status(401).send({ loggedIn: false });
