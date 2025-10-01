@@ -3,8 +3,10 @@
   import { page } from "$app/state";
   import { api } from "$lib/api";
   import ClientCalendarAvailability from "$lib/components/client-calendar-availability.svelte";
+  import type { ServiceType } from "../../../@types/service.type";
+  import Carousel from "../../../lib/components/carousel-img.svelte";
 
-  let service: any = null;
+  let service: ServiceType;
   let variations: any[] = [];
   let loading = true;
   let errorMessage = "";
@@ -79,6 +81,10 @@
 
       alert(res.data.message);
     } catch (err: any) {
+      if (err.response.status === 401) {
+        return (messageErrorBookingService = "Necessário logar como cliente.");
+      }
+
       messageErrorBookingService =
         err.response?.data?.message ?? "Erro desconhecido";
     }
@@ -107,17 +113,9 @@
       <h1 class="text-2xl font-bold mb-2">{service.name}</h1>
       <p class="text-gray-600 mb-4">{service.description}</p>
 
-      {#if service.photos?.length}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {#each service.photos as photo}
-            <img
-              src={photo}
-              alt="Foto do serviço"
-              class="w-full h-40 object-cover rounded"
-            />
-          {/each}
-        </div>
-      {/if}
+      <div class="w-full h-56 xl:h-96 mx-auto xl:max-w-1/2">
+        <Carousel photos={service.photos ?? []} />
+      </div>
 
       <section>
         <h2 class="text-xl font-bold mt-8 mb-4">Agenda</h2>
