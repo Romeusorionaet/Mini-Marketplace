@@ -57,6 +57,32 @@ export async function scheduleRoutes(app: FastifyInstance) {
     }
   );
 
+  app.delete("/delete", async (request, reply) => {
+    const { availabilityId } = request.query as { availabilityId: string };
+
+    if (!availabilityId) {
+      return reply.status(400).send({
+        message: "Parâmetro de busca (availabilityId) é obrigatório.",
+      });
+    }
+
+    const token = request.cookies["@marketplace"];
+    if (!token) return reply.status(401).send({ loggedIn: false });
+    const payload = request.server.jwt.verify<JwtPayloadType>(token);
+
+    try {
+      await database
+        .delete(availabilities)
+        .where(eq(availabilities.id, availabilityId));
+
+      await redis.del(CACHE_KEYS.SCHEDULE_PROVIDER(payload.providerId));
+
+      return reply.status(200).send({ message: "Horário removido da agenda." });
+    } catch (err: any) {
+      return reply.status(500).send({ message: "Erro interno do servidor" });
+    }
+  });
+
   app.get("/list/provider", async (request, reply) => {
     const { providerId } = request.query as { providerId: string };
 
@@ -71,7 +97,7 @@ export async function scheduleRoutes(app: FastifyInstance) {
         .where(eq(availabilities.providerId, providerId));
 
       if (schedule.length === 0) {
-        return reply.status(200).send({ schedule: [] });
+        return reply.status(200).send({ availableSchedule: [] });
       }
 
       const availabilityIds = schedule.map((a) => a.id);
@@ -81,8 +107,13 @@ export async function scheduleRoutes(app: FastifyInstance) {
         .from(bookings)
         .where(inArray(bookings.availabilityId, availabilityIds));
 
-      const availableSchedule = schedule.filter(
+      let availableSchedule = schedule.filter(
         (a) => !booked.some((b) => b.availabilityId === a.id)
+      );
+
+      const now = new Date();
+      availableSchedule = availableSchedule.filter(
+        (a) => new Date(a.startTime) >= now
       );
 
       await redis.set(cacheKey, JSON.stringify(availableSchedule), "EX", 300);
