@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { FastifyInstance } from "fastify";
 import { CACHE_KEYS } from "../constants/cache-keys";
 import { database } from "../database/db";
@@ -22,7 +22,12 @@ export async function serviceRoutes(app: FastifyInstance) {
         const [existTypeService] = await database
           .select()
           .from(services)
-          .where(eq(services.typeId, service.typeId));
+          .where(
+            and(
+              eq(services.typeId, service.typeId),
+              eq(services.providerId, payload.providerId)
+            )
+          );
 
         if (existTypeService) {
           return reply.status(409).send({
