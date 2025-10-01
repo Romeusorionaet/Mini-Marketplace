@@ -90,6 +90,20 @@ Crie um arquivo .env na raiz, o arquivo .env.example possui valores corretos par
 
 ---
 
+## 🔹 Diagrama de Caso de Uso
+
+Este diagrama mostra como **usuários (clientes e prestadores de serviço)** interagem com o sistema, incluindo cadastro, contratação, criação de serviços e gerenciamento da agenda.
+
+![Diagrama de Caso de Uso](./assets/imgs/mini-marketplace-use-case.png)
+
+## 🔹 Modelagem de Dados
+
+A modelagem foi feita com **dbdiagram.io**, representando as principais entidades do sistema e seus relacionamentos.
+
+![Modelagem de Dados](./assets/imgs/mini-arketplace-db.png)
+
+---
+
 👨‍💻 Autor
 
 Desenvolvido por Romeu soares – Desenvolvedor Web
