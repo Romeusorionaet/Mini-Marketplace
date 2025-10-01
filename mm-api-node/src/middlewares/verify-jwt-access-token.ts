@@ -7,7 +7,7 @@ export function verifyJWTAccessToken(requiredRole: "PROVIDER" | "CLIENT") {
 
       if (payload.role !== requiredRole) {
         return reply.status(403).send({
-          message: "Você não tem permissão para acessar esta rota.",
+          message: "Você não tem permissão.",
         });
       }
     } catch (err) {
