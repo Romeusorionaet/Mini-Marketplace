@@ -7,7 +7,7 @@
   };
 
   const navItems: NavItem[] = [
-    { label: "Dashboard", path: "/provider-panel" },
+    { label: "Serviços", path: "/provider-panel" },
     { label: "Histórico", path: "/provider-panel/history-services" },
     { label: "Agenda", path: "/provider-panel/schedule" },
     { label: "Contratações", path: "/provider-panel/hirings" },

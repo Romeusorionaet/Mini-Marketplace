@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let schedule: any[] = [];
+  export let schedule: AvailabilityType[] = [];
   export let initialDate: Date | string = new Date();
   export let resetSelection: boolean = false;
 
@@ -8,7 +8,7 @@
     selectedSlots = [];
   }
 
-  export let onBook: (payload: { slot: any }) => void = () => {};
+  export let onBook: (payload: { slot: AvailabilityType }) => void = () => {};
 
   let current = new Date(
     typeof initialDate === "string" ? new Date(initialDate) : initialDate
@@ -60,7 +60,7 @@
   }
 
   let selectedDate: Date | null = null;
-  let selectedSlots: any[] = [];
+  let selectedSlots: AvailabilityType[] = [];
 
   function isAvailable(date: Date) {
     return availableDates.has(toISODateString(date));

@@ -2,39 +2,9 @@
   import { onMount } from "svelte";
   import { api } from "$lib/api";
   import { LoaderCircle } from "lucide-svelte";
+  import type { BookingProviderType } from "../../../@types/booking-provider.type";
 
-  type BookingProvider = {
-    bookings: {
-      id: string;
-      clientId: string;
-      providerId: string;
-      serviceVariationId: string;
-      availabilityId: string;
-      status: string;
-      createdAt: string;
-      updatedAt: string;
-    };
-    users: {
-      id: string;
-      name: string;
-      email: string;
-      city: string;
-    };
-    service_variations: {
-      id: string;
-      name: string;
-      durationMinutes: number;
-      priceCents: number;
-    };
-    availabilities: {
-      id: string;
-      startTime: string;
-      endTime: string;
-      dayOfWeek: number;
-    };
-  };
-
-  let bookings: BookingProvider[] = [];
+  let bookings: BookingProviderType[] = [];
   let loading = true;
   let errorMessage = "";
   let cancelingId: string | null = null;
