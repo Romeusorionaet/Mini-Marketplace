@@ -1,37 +1,8 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { afterNavigate } from "$app/navigation";
-  import { api } from "$lib/api";
-  import { LoaderCircle } from "lucide-svelte";
-
-  let loading = true;
-  let errorMessage = "";
-  let history: any[] = [];
-
-  async function fetchHistory() {
-    loading = true;
-    errorMessage = "";
-    try {
-      const res = await api.get("/booking/history/provider");
-      history = res.data.historyBookings;
-      history.sort(
-        (a, b) =>
-          new Date(b.bookings?.createdAt).getTime() -
-          new Date(a.bookings?.createdAt).getTime()
-      );
-    } catch (err: any) {
-      errorMessage =
-        err.response?.data?.message || "Erro ao carregar histórico.";
-    } finally {
-      loading = false;
-    }
-  }
-
-  afterNavigate((nav) => {
-    if (nav.to?.url.pathname?.startsWith("/provider-panel/history-services")) {
-      fetchHistory();
-    }
-  });
+  export let data: {
+    history: HistoryProviderType[];
+    errorMessage: string;
+  };
 
   function formatDate(d: string) {
     return new Date(d).toLocaleString("pt-BR", {
@@ -39,26 +10,20 @@
       timeStyle: "short",
     });
   }
-
-  onMount(() => {
-    fetchHistory();
-  });
 </script>
 
 <main>
   <h1 class="text-2xl font-bold mb-4">Histórico de Contratações</h1>
 
-  {#if loading}
-    <div class="flex items-center gap-2">
-      <LoaderCircle class="animate-spin" /> Carregando...
-    </div>
-  {:else if errorMessage}
-    <p class="text-red-600">{errorMessage}</p>
+  {#if data.errorMessage}
+    <p class="text-red-500">{data.errorMessage}</p>
+  {:else if data.errorMessage}
+    <p class="text-red-600">{data.errorMessage}</p>
   {:else if history && history.length === 0}
     <p class="text-gray-600">Nenhuma contratação encontrada.</p>
   {:else}
     <ul class="space-y-4">
-      {#each history as booking}
+      {#each data.history as booking}
         <li
           class={`p-4 rounded shadow ${
             booking.bookings?.status === "CANCELLED" ? "bg-red-200" : "bg-white"
