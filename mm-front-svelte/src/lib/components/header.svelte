@@ -3,6 +3,7 @@
   import { isLoggedIn, user } from "../stores/auth";
   import { api } from "$lib/api";
   import { goto } from "$app/navigation";
+  import { hasNotification } from "$lib/stores/notifications";
 
   onMount(async () => {
     try {
@@ -10,7 +11,12 @@
 
       if (res.data.loggedIn) {
         isLoggedIn.set(true);
-        user.set({ email: res.data.email, role: res.data.role });
+        user.set({
+          sub: res.data.sub,
+          email: res.data.email,
+          role: res.data.role,
+          providerId: res.data.providerId,
+        });
       } else {
         isLoggedIn.set(false);
         user.set(null);
@@ -25,6 +31,7 @@
     await api.post("/auth/logout").finally(() => {
       isLoggedIn.set(false);
       user.set(null);
+      hasNotification.set(false);
     });
 
     goto("/");

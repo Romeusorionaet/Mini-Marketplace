@@ -6,4 +6,5 @@ export const user = writable<{
   sub: string;
   email: string;
   role: string;
+  providerId: string;
 } | null>(null);
