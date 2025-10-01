@@ -36,39 +36,60 @@ export async function bookingRoutes(app: FastifyInstance) {
             .send({ message: "Esse horário já está reservado." });
         }
 
-        await database.insert(bookings).values({
-          clientId: payload.sub,
-          providerId: booking.providerId,
-          serviceVariationId: booking.serviceVariationId,
-          availabilityId: booking.availabilityId,
-          status: "CONFIRMED",
-        });
+        const [bookingId] = await database
+          .insert(bookings)
+          .values({
+            clientId: payload.sub,
+            providerId: booking.providerId,
+            serviceVariationId: booking.serviceVariationId,
+            availabilityId: booking.availabilityId,
+            status: "CONFIRMED",
+          })
+          .returning({ id: bookings.id });
 
-        const serviceVariation = await database
-          .select()
-          .from(serviceVariations)
-          .where(eq(serviceVariations.id, booking.serviceVariationId));
+        const [providerUser] = await database
+          .select({
+            userId: users.id,
+          })
+          .from(users)
+          .innerJoin(providers, eq(providers.userId, users.id))
+          .where(eq(providers.id, booking.providerId));
 
-        io.to(booking.providerId).emit("newBooking", {
-          service: serviceVariation,
-          message: "Você recebeu uma nova contratação!",
+        if (providerUser) {
+          io.to(providerUser.userId).emit("newBooking", {
+            bookingId: bookingId.id,
+            message: "Você recebeu uma nova contratação!",
+          });
+        }
+
+        io.to(payload.sub).emit("bookingCreated", {
+          bookingId: bookingId.id,
+          message: "Sua contratação foi confirmada!",
         });
 
         await redis.del(CACHE_KEYS.SCHEDULE_PROVIDER(booking.providerId));
         await redis.del(CACHE_KEYS.HISTORY_PROVIDER(booking.providerId));
-        await redis.del(CACHE_KEYS.BOOKINGS_CLIENT(booking.clientId));
+        await redis.del(CACHE_KEYS.BOOKINGS_CLIENT(payload.sub));
 
         return reply
           .status(201)
           .send({ message: "Serviço contratado com sucesso!" });
       } catch (err: any) {
+        if (err.cause?.code === "23503") {
+          return reply
+            .status(400)
+            .send({ message: "Esse horário foi removido." });
+        }
+
         return reply.status(500).send({ message: "Erro interno do servidor" });
       }
     }
   );
 
   app.get("/list/provider", async (request, reply) => {
-    const { providerId } = request.query as { providerId: string };
+    const token = request.cookies["@marketplace"];
+    if (!token) return reply.status(401).send({ loggedIn: false });
+    const payload = request.server.jwt.verify<JwtPayloadType>(token);
 
     try {
       const bookingsProvider = await database
@@ -85,7 +106,7 @@ export async function bookingRoutes(app: FastifyInstance) {
         )
         .where(
           and(
-            eq(bookings.providerId, providerId),
+            eq(bookings.providerId, payload.providerId),
             eq(bookings.status, "CONFIRMED")
           )
         );
@@ -100,10 +121,13 @@ export async function bookingRoutes(app: FastifyInstance) {
     const { bookingId } = request.query as { bookingId: string };
 
     try {
-      await database
+      const [booking] = await database
         .update(bookings)
         .set({ status: "CANCELLED" })
-        .where(eq(bookings.id, bookingId));
+        .where(eq(bookings.id, bookingId))
+        .returning({ providerId: bookings.providerId });
+
+      await redis.del(CACHE_KEYS.HISTORY_PROVIDER(booking.providerId));
 
       return reply.status(200).send({ message: "Reserva calelada." });
     } catch (err: any) {
@@ -112,10 +136,12 @@ export async function bookingRoutes(app: FastifyInstance) {
   });
 
   app.get("/history/provider", async (request, reply) => {
-    const { providerId } = request.query as { providerId: string };
+    const token = request.cookies["@marketplace"];
+    if (!token) return reply.status(401).send({ loggedIn: false });
+    const payload = request.server.jwt.verify<JwtPayloadType>(token);
 
     try {
-      const cacheKey = CACHE_KEYS.HISTORY_PROVIDER(providerId);
+      const cacheKey = CACHE_KEYS.HISTORY_PROVIDER(payload.providerId);
       const cached = await redis.get(cacheKey);
       if (cached) return reply.send({ historyBookings: JSON.parse(cached) });
 
@@ -131,7 +157,7 @@ export async function bookingRoutes(app: FastifyInstance) {
           availabilities,
           eq(availabilities.id, bookings.availabilityId)
         )
-        .where(eq(bookings.providerId, providerId));
+        .where(eq(bookings.providerId, payload.providerId));
 
       await redis.set(
         cacheKey,
