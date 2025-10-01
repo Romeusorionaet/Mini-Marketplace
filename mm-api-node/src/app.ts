@@ -12,7 +12,11 @@ import fastifyCookie from "@fastify/cookie";
 export const app = fastify();
 
 const setupApp = async () => {
-  await app.register(fastifyCors, { origin: env.HOST_URL, credentials: true });
+  await app.register(fastifyCors, {
+    origin: env.HOST_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  });
 };
 
 app.register(fastifyCookie);
