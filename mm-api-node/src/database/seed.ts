@@ -37,7 +37,7 @@ async function seed() {
     {
       id: createId(),
       name: "Carlos Silva",
-      email: "carlos@example.com",
+      email: "carlos@gmail.com",
       passwordHash,
       role: "PROVIDER" as const,
       city: "Canguaretama",
@@ -45,7 +45,7 @@ async function seed() {
     {
       id: createId(),
       name: "Ana Souza",
-      email: "ana@example.com",
+      email: "ana@gmail.com",
       passwordHash,
       role: "PROVIDER" as const,
       city: "Canguaretama",
