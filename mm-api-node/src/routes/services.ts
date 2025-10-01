@@ -14,6 +14,10 @@ export async function serviceRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const service = request.body;
 
+      const token = request.cookies["@marketplace"];
+      if (!token) return reply.status(401).send({ loggedIn: false });
+      const payload = request.server.jwt.verify<JwtPayloadType>(token);
+
       try {
         const [existTypeService] = await database
           .select()
@@ -29,7 +33,7 @@ export async function serviceRoutes(app: FastifyInstance) {
         const [serviceCreated] = await database
           .insert(services)
           .values({
-            providerId: service.providerId,
+            providerId: payload.providerId,
             typeId: service.typeId,
             description: service.description,
             name: service.name,
@@ -79,6 +83,7 @@ export async function serviceRoutes(app: FastifyInstance) {
           redis.del(CACHE_KEYS.SERVICE_TYPES),
           redis.del(CACHE_KEYS.BY_TYPE(service.typeId)),
           redis.del(CACHE_KEYS.SERVICE(serviceCreated.id)),
+          redis.del(CACHE_KEYS.SERVICE_PROVIDER(serviceCreated.providerId)),
         ]);
 
         return reply
@@ -89,6 +94,34 @@ export async function serviceRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  app.delete("/delete", async (request, reply) => {
+    const { serviceId } = request.query as { serviceId: string };
+
+    try {
+      const [service] = await database
+        .select()
+        .from(services)
+        .where(eq(services.id, serviceId));
+
+      if (!service) {
+        return reply.status(404).send({ message: "Serviço não encontrado" });
+      }
+
+      await database.delete(services).where(eq(services.id, serviceId));
+
+      await Promise.all([
+        redis.del(CACHE_KEYS.SERVICE_TYPES),
+        redis.del(CACHE_KEYS.BY_TYPE(service.typeId)),
+        redis.del(CACHE_KEYS.SERVICE(serviceId)),
+        redis.del(CACHE_KEYS.SERVICE_PROVIDER(service.providerId)),
+      ]);
+
+      return reply.status(200).send({ message: "Serviço deletado" });
+    } catch (err: any) {
+      return reply.status(500).send({ message: "Erro interno do servidor" });
+    }
+  });
 
   app.get("/list-types", async (request, reply) => {
     try {
@@ -180,6 +213,50 @@ export async function serviceRoutes(app: FastifyInstance) {
       );
 
       return reply.status(200).send({ service, variations });
+    } catch (err: any) {
+      return reply.status(500).send({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/provider", async (request, reply) => {
+    const token = request.cookies["@marketplace"];
+    if (!token) return reply.status(401).send({ loggedIn: false });
+    const payload = request.server.jwt.verify<JwtPayloadType>(token);
+
+    try {
+      const cacheKey = CACHE_KEYS.SERVICE_PROVIDER(payload.providerId);
+      const cached = await redis.get(cacheKey);
+      if (cached) return reply.status(200).send(JSON.parse(cached));
+
+      const servicesList = await database
+        .select()
+        .from(services)
+        .where(eq(services.providerId, payload.providerId));
+
+      if (servicesList.length === 0) {
+        return reply.status(404).send({ message: "Nenhum serviço encontrado" });
+      }
+
+      const serviceIds = servicesList.map((s) => s.id);
+
+      const variationsList = await database
+        .select()
+        .from(serviceVariations)
+        .where(inArray(serviceVariations.serviceId, serviceIds));
+
+      const result = servicesList.map((service) => {
+        const variations = variationsList.filter(
+          (v) => v.serviceId === service.id
+        );
+        return {
+          ...service,
+          variations,
+        };
+      });
+
+      await redis.set(cacheKey, JSON.stringify(result), "EX", 300);
+
+      return reply.status(200).send(result);
     } catch (err: any) {
       return reply.status(500).send({ message: "Erro interno do servidor" });
     }
