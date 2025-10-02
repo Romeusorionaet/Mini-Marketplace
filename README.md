@@ -140,6 +140,37 @@ A modelagem foi feita com **dbdiagram.io**, representando as principais entidade
 
 ---
 
+# Estrutura de Rotas do Frontend (SvelteKit)
+
+> Esta é a estrutura principal do frontend construído com SvelteKit, mostrando as rotas, páginas, layouts e scripts de carregamento (Page Load) utilizados na aplicação.  
+> A organização segue a lógica de **cliente, prestador (provider-panel) e autenticação**.
+
+```
+src/routes
+├─ auth/                        # Autenticação
+│  ├─ sign-in/+page.svelte      # Tela de login
+│  └─ sign-up/+page.svelte      # Tela de cadastro
+├─ client/my-hirings/+page.svelte  # Contratações do cliente
+├─ provider-panel/              # Painel do prestador
+│  ├─ hirings/+page.svelte      # Novas contratações
+│  ├─ history-services/         # Histórico de serviços do prestador
+│  │  ├─ +page.svelte
+│  │  └─ +page.ts               # Page Load Script
+│  ├─ schedule/                 # Agenda do prestador
+│  │  ├─ +page.svelte
+│  │  └─ +page.ts               # Page Load Script
+│  ├─ +layout.svelte            # Layout do provider-panel
+│  ├─ +page.svelte              # Dashboard do prestador
+│  └─ +page.ts                  # Page Load Script do dashboard
+├─ service-details/[id]/+page.svelte  # Página de detalhes de serviço
+├─ +layout.svelte               # Layout geral do site
+└─ +page.svelte                 # Homepage
+```
+
+> > Observação: arquivos `+page.ts` são Page Load Scripts do SvelteKit que carregam dados do backend antes da renderização da página correspondente.
+
+---
+
 👨‍💻 Autor
 
 Desenvolvido por Romeu soares – Desenvolvedor Web
