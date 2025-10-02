@@ -20,7 +20,7 @@ export const load: PageLoad = async () => {
   }
 
   try {
-    const res = await api.get("/service/list-types");
+    const res = await api.get("/service/list-types/provider");
     serviceTypes = res.data.servicesType;
   } catch (err) {
     console.error(err);
