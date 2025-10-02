@@ -16,14 +16,11 @@ RUN npm install --omit=optional
 RUN apk add --no-cache postgresql-client curl
 
 COPY --from=builder /app/build ./build
-
 COPY drizzle.config.json ./
-
 COPY src ./src
-
 COPY .env.production .env.production
 COPY entrypoint.sh ./
-RUN chmod +x entrypoint.sh
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 3333
 
