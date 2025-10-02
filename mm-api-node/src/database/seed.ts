@@ -11,6 +11,7 @@ import {
 import { database } from "./db";
 import { hashPassword } from "../utils/cryptography";
 import { esClient } from "../services/elastic-search/es-client";
+import { inArray, eq } from "drizzle-orm";
 
 async function seed() {
   const serviceTypesData = [
@@ -141,22 +142,46 @@ async function seed() {
   for (const provider of providersData) {
     const availData: AvailabilitiesSelectModelType[] = [];
 
-    for (let i = 0; i < 20; i++) {
-      const day = daysOfWeek[i % daysOfWeek.length];
-      const hour = 8 + (i % 10);
-      const start = new Date();
-      start.setDate(start.getDate() + day);
-      start.setHours(hour, 0, 0, 0);
-      const end = new Date(start);
-      end.setMinutes(end.getMinutes() + 60);
+    const providerServices = await database
+      .select()
+      .from(serviceVariations)
+      .where(
+        inArray(
+          serviceVariations.serviceId,
+          (
+            await database
+              .select()
+              .from(services)
+              .where(eq(services.providerId, provider.id))
+          ).map((s) => s.id)
+        )
+      );
 
-      availData.push({
-        id: createId(),
-        providerId: provider.id,
-        dayOfWeek: day,
-        startTime: start,
-        endTime: end,
-      });
+    if (!providerServices.length) continue;
+
+    for (let i = 0; i < 14; i++) {
+      const day = daysOfWeek[i % daysOfWeek.length];
+
+      const startTimes = [9, 14];
+      for (const hour of startTimes) {
+        const start = new Date();
+        start.setDate(start.getDate() + day);
+        start.setHours(hour, 0, 0, 0);
+
+        const maxDuration = Math.max(
+          ...providerServices.map((s) => s.durationMinutes)
+        );
+        const end = new Date(start);
+        end.setMinutes(end.getMinutes() + maxDuration);
+
+        availData.push({
+          id: createId(),
+          providerId: provider.id,
+          dayOfWeek: day,
+          startTime: start,
+          endTime: end,
+        });
+      }
     }
 
     await database.insert(availabilities).values(availData);
