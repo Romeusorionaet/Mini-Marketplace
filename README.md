@@ -6,6 +6,18 @@ Tudo containerizado via **Docker Compose**.
 
 ## 🚀 Como rodar o projeto com Docker
 
+⚙️ Variáveis de Ambiente na pasta "mm-node-api":
+Crie um arquivo .env.production na raiz, o arquivo .env.example possui valores corretos para ambiente docker-compose:
+
+<a href="https://github.com/Romeusorionaet/Mini-Marketplace/blob/main/mm-api-node/.env.example" target="_blank">.env.example</a>
+
+⚙️ Variáveis de Ambiente na pasta "mm-front-evelte":
+Crie um arquivo .env na raiz, o arquivo .env.example possui valores corretos para local dev ou docker-compose:
+
+<a href="https://github.com/Romeusorionaet/Mini-Marketplace/blob/main/mm-front-svelte/.env.example" target="_blank">.env.example</a>
+
+---
+
 1. **Subir containers (build inicial):**
 
 ```sh
@@ -18,6 +30,10 @@ Popular o banco de dados (rodar seed manualmente):
 docker-compose exec api npm run seed
 ```
 
+#### Para visualizar o Mini Marketplace no navegador acesse: "http://localhost:3000"
+
+---
+
 Parar os containers (sem perder os dados):
 
 ```sh
@@ -29,16 +45,6 @@ Subir novamente (dados persistem nos volumes):
 ```sh
 docker-compose up -d
 ```
-
-⚙️ Variáveis de Ambiente na pasta "mm-node-api":
-Crie um arquivo .env.production na raiz, o arquivo .env.example possui valores corretos para local dev ou docker-compose:
-
-<a href="https://github.com/Romeusorionaet/Mini-Marketplace/blob/main/mm-api-node/.env.example" target="_blank">.env.example</a>
-
-⚙️ Variáveis de Ambiente na pasta "mm-front-evelte":
-Crie um arquivo .env na raiz, o arquivo .env.example possui valores corretos para local dev ou docker-compose:
-
-<a href="https://github.com/Romeusorionaet/Mini-Marketplace/blob/main/mm-front-svelte/.env.example" target="_blank">.env.example</a>
 
 ## ✅ Escopo Mínimo Implementado (O que foi feito)
 
