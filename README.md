@@ -6,13 +6,25 @@ Tudo containerizado via **Docker Compose**.
 
 ## 🚀 Como rodar o projeto com Docker
 
+Baixe esse repositório em sua máquina, usando:
+
+```sh
+git clone https://github.com/Romeusorionaet/Mini-Marketplace.git
+```
+
+Então entre na pasta Mini-Marketplace:
+
+```sh
+cd Mini-Marketplace
+```
+
 ⚙️ Variáveis de Ambiente na pasta "mm-node-api":
-Crie um arquivo .env.production na raiz, o arquivo .env.example possui valores corretos para ambiente docker-compose:
+Crie um arquivo (<strong>.env.production</strong>) na raiz, o arquivo .env.example possui valores corretos para ambiente docker-compose:
 
 <a href="https://github.com/Romeusorionaet/Mini-Marketplace/blob/main/mm-api-node/.env.example" target="_blank">.env.example</a>
 
 ⚙️ Variáveis de Ambiente na pasta "mm-front-evelte":
-Crie um arquivo .env na raiz, o arquivo .env.example possui valores corretos para local dev ou docker-compose:
+Crie um arquivo (<strong>.env</strong>) na raiz, o arquivo .env.example possui valores corretos para local dev ou docker-compose:
 
 <a href="https://github.com/Romeusorionaet/Mini-Marketplace/blob/main/mm-front-svelte/.env.example" target="_blank">.env.example</a>
 
@@ -24,13 +36,31 @@ Crie um arquivo .env na raiz, o arquivo .env.example possui valores corretos par
 docker-compose up --build
 ```
 
-Popular o banco de dados (rodar seed manualmente):
+Espere pelo log:
+
+> mini_marketplace_api | Server is running on port: 3333
+> </br>
+> mini_marketplace_api | ✅ Redis conectado
+
+Agora para Popular o banco de dados abra um novo terminal mas não esqueça que acessar o mesmo diretório:
+
+```sh
+cd Mini-Marketplace
+```
+
+Rodar seed manualmente:
 
 ```sh
 docker-compose exec api npm run seed
 ```
 
 #### Para visualizar o Mini Marketplace no navegador acesse: "http://localhost:3000"
+
+Agora você pode visualizar o Mini Marketplace!
+
+> Voce pode se registrar como cliente e testar a aplicação, se o seed foi executado você poderá ver tipos de serviços procurar por algum e clicar para visualizar a agenda de disponibilidade do prestador de serviço e reservar um horário.
+
+> Como prestador de serviço você pode logar com email "ana@gmail.com" ou "carlos@gmail.com" com a senha "123456" caso o seed ter sido execultado esses serão as contas registradas como prestadores de serviço.
 
 ---
 
