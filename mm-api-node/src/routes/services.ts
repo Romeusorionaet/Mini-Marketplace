@@ -132,15 +132,23 @@ export async function serviceRoutes(app: FastifyInstance) {
     try {
       const CACHE_KEY = CACHE_KEYS.SERVICE_TYPES;
       const cached = await redis.get(CACHE_KEY);
-      if (cached)
+      if (cached) {
         return reply.status(200).send({ servicesType: JSON.parse(cached) });
+      }
 
-      const servicesType = await database.select().from(serviceTypes);
+      const servicesType = await database
+        .selectDistinct({
+          id: serviceTypes.id,
+          name: serviceTypes.name,
+        })
+        .from(serviceTypes)
+        .innerJoin(services, eq(services.typeId, serviceTypes.id));
 
       await redis.set(CACHE_KEY, JSON.stringify(servicesType), "EX", 300);
 
       return reply.status(200).send({ servicesType });
     } catch (err: any) {
+      console.error(err);
       return reply.status(500).send({ message: "Erro interno do servidor" });
     }
   });
